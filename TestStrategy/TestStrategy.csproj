@@ -9,18 +9,18 @@
     <AssemblyName>TestStrategy</AssemblyName>
     <RootNamespace>TestStrategy</RootNamespace>
     <StartAction>Program</StartAction>
-    <StartProgram>D:\Spy Money\TradingPlatform\v1.142.41\Console.StarterNew.exe</StartProgram>
-    <StartArguments>--address 127.0.0.1 --port 56233</StartArguments>
+    <StartProgram>C:\Quantower\TradingPlatform\v1.144.12\Console.StarterNew.exe</StartProgram>
+    <StartArguments>--address 127.0.0.1 --port 59049</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>D:\Spy Money\TradingPlatform\v1.142.41\..\..\Settings\Scripts\Strategies\TestStrategy</OutputPath>
+    <OutputPath>C:\Quantower\TradingPlatform\v1.144.12\..\..\Settings\Scripts\Strategies\TestStrategy</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>D:\Spy Money\TradingPlatform\v1.142.41\..\..\Settings\Scripts\Strategies\TestStrategy</OutputPath>
+    <OutputPath>C:\Quantower\TradingPlatform\v1.144.12\..\..\Settings\Scripts\Strategies\TestStrategy</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="TradingPlatform.BusinessLayer">
-      <HintPath>D:\Spy Money\TradingPlatform\v1.142.41\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <HintPath>C:\Quantower\TradingPlatform\v1.144.12\bin\TradingPlatform.BusinessLayer.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

@@ -16,7 +16,10 @@ namespace TestStrategy
                     {
                         Symbol = _symbol,
                         FromTime = _startPoint,
-                        Aggregation = _aggregation
+                        Aggregation = _aggregation,
+
+                        SessionsContainer = _symbol.FindSessionsContainer(),
+                        ExcludeOutOfSession = false,
                     });
                 }
 
