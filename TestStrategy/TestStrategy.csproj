@@ -10,7 +10,7 @@
     <RootNamespace>TestStrategy</RootNamespace>
     <StartAction>Program</StartAction>
     <StartProgram>C:\Quantower\TradingPlatform\v1.145.5\Console.StarterNew.exe</StartProgram>
-    <StartArguments>--address 127.0.0.1 --port 63037</StartArguments>
+    <StartArguments>--address 127.0.0.1 --port 60349</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>C:\Quantower\TradingPlatform\v1.145.5\..\..\Settings\Scripts\Strategies\TestStrategy</OutputPath>

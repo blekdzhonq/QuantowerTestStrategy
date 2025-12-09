@@ -128,7 +128,7 @@ namespace TestStrategy
                         this.symbol.NewQuote += SymbolOnNewQuote;
                         this.symbol.NewLast += SymbolOnNewLast;
                     }
-                    timeframe = new(symbol, StartPoint, timeframeSetting);
+                    timeframe = new(Core, symbol, StartPoint, timeframeSetting);
 
                     botData = timeframe.Data;
 
@@ -138,6 +138,11 @@ namespace TestStrategy
                     botData.AddIndicator(slowEMA = Core.Indicators.BuiltIn.EMA(slowEmaPeriod, PriceType.Close));
 
                     botData.NewHistoryItem += OnNewHistoryItem;
+
+
+                    
+
+
 
                 }
                     finally

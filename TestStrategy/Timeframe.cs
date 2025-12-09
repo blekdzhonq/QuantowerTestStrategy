@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using TradingPlatform.BusinessLayer;
 
 namespace TestStrategy
@@ -12,14 +13,37 @@ namespace TestStrategy
             {
                 if (data is null)
                 {
+
+                    var allSessions = _core.CustomSessions
+                                ?? throw new InvalidOperationException("Core.CustomSessions is null.");
+
+                    CustomSessionsContainer cmeSessions = null;
+
+                    foreach (var sc in allSessions)
+                    {
+                        if (string.Equals(sc.Name, "CME Indexes Full day", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cmeSessions = sc;
+                            break;
+                        }
+                    }
+
+                    if (cmeSessions is null)
+                    {
+                        throw new InvalidOperationException(
+                            "Session template 'CME Indexes Full day' was not found in Core.CustomSessions. " +
+                            "Make sure this session template exists in the platform and is loaded.");
+                    }
+
                     data = _symbol.GetHistory(new HistoryRequestParameters()
                     {
                         Symbol = _symbol,
                         FromTime = _startPoint,
                         Aggregation = _aggregation,
 
-                        SessionsContainer = _symbol.FindSessionsContainer(),
+                        SessionsContainer = cmeSessions,
                         ExcludeOutOfSession = false,
+                        IsResetOnSessionBoundaryEnabled = true,
                     });
                 }
 
@@ -38,12 +62,15 @@ namespace TestStrategy
         private Symbol _symbol;
         private DateTime _startPoint;
         private Period _basePeriod;
+        private Core _core;
 
-        public Timeframe(Symbol symbol,
+        public Timeframe(
+            Core core,
+            Symbol symbol,
             DateTime startPoint,
             TimeframeSetting timeframeSetting)
         {
-
+            _core = core;
             _symbol = symbol;
             _startPoint = startPoint;
 
@@ -116,6 +143,14 @@ namespace TestStrategy
                 aggregation = new HistoryAggregationSpyMoneyBars(timeframeSetting.SpyMoneyBarsValue);
 
 
+            }
+
+            if (aggregation is null)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(timeframeSetting.selectedTimeframe),
+                    timeframeSetting.selectedTimeframe,
+                    $"Unsupported timeframe: {(TimeframeEnum)timeframeSetting.selectedTimeframe}");
             }
 
             _aggregation = aggregation;
