@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using TradingPlatform.BusinessLayer;
 
 namespace TestStrategy
@@ -13,12 +14,20 @@ namespace TestStrategy
 	public class TestStrategy : Strategy
     {
 
+        int orderQuantity = 1;
+        private DateTime lastProcessedBarTime = DateTime.MinValue;
 
         TimeframeSetting timeframeSetting = new();
 
         Timeframe timeframe;
 
         HistoricalData botData;
+
+        bool isRunning = false;
+        private readonly object syncLock = new object();
+
+        Indicator fastEMA;
+        Indicator slowEMA;
 
 
         [InputParameter("Symbol", 10)]
@@ -30,8 +39,19 @@ namespace TestStrategy
         [InputParameter("Start Point", 30)]
         public DateTime StartPoint;
 
-        bool isRunning = false;
-        private readonly object syncLock = new object();
+        [InputParameter("Profit Target Ticks", 40, 1, Int32.MaxValue)]
+        public int profitTargetTicks = 10;
+
+        [InputParameter("Stop Loss Ticks", 50, 1, Int32.MaxValue)]
+        public int stopLossTicks = 10;
+
+        [InputParameter("fast ema period", 60, 1, Int32.MaxValue)]
+        public int fastEmaPeriod = 9;
+
+        [InputParameter("slow ema period", 70, 1, Int32.MaxValue)]
+        public int slowEmaPeriod = 50;
+
+
 
         public override IList<SettingItem> Settings
         {
@@ -49,13 +69,8 @@ namespace TestStrategy
 
                 timeframeSetting.SetSettings(value, "Bot Timeframe");
 
-
-
-
             }
         }
-
-
 
         public override string[] MonitoringConnectionsIds => new string[] { this.symbol?.ConnectionId };
 
@@ -84,6 +99,7 @@ namespace TestStrategy
         protected override void OnCreated()
         {
             // Add your code here
+
         }
 
         /// <summary>
@@ -112,18 +128,16 @@ namespace TestStrategy
                         this.symbol.NewQuote += SymbolOnNewQuote;
                         this.symbol.NewLast += SymbolOnNewLast;
                     }
-
-                    // Add your code here
-
-
                     timeframe = new(symbol, StartPoint, timeframeSetting);
 
                     botData = timeframe.Data;
 
+                    Log($"Bot tf is {botData.Aggregation.ToString()}");
+
+                    botData.AddIndicator(fastEMA = Core.Indicators.BuiltIn.EMA(fastEmaPeriod, PriceType.Close));
+                    botData.AddIndicator(slowEMA = Core.Indicators.BuiltIn.EMA(slowEmaPeriod, PriceType.Close));
+
                     botData.NewHistoryItem += OnNewHistoryItem;
-
-
-
 
                 }
                     finally
@@ -131,19 +145,93 @@ namespace TestStrategy
                         isRunning = false;
                     }
                 }
-
-
         }
 
         private void OnNewHistoryItem(object sender, HistoryEventArgs e)
         {
-            int offset = 1;
+              
+            if (botData == null || botData.Count < 3)
+                return;
 
-            Log($"Time {botData.Time(offset)} " +
-                $"Open {botData.Open(offset)} " +
-                $"High {botData.High(offset)} " +
-                $"Low {botData.Low(offset)} " +
-                $"Close {botData.Close(offset)} ");
+            int offset = 1; // last closed bar
+            int offset1 = offset + 1; // prior bar
+
+            DateTime barTime = botData.Time(offset);
+
+            if (barTime <= lastProcessedBarTime)
+                return;
+
+            lastProcessedBarTime = barTime;
+
+            double open = botData.Open(offset);
+            double high = botData.High(offset);
+            double low = botData.Low(offset);
+            double close = botData.Close(offset);
+            double fastEMAValue = fastEMA.GetValue(offset);
+            double slowEMAValue = slowEMA.GetValue(offset);
+
+            Log($"BAR {barTime:yyyy-MM-dd HH:mm:ss}  O:{open} H:{high} L:{low} C:{close} Fast EMA:{fastEMAValue} Slow EMA:{slowEMAValue}");
+
+            bool longSignal = fastEMA.GetValue(offset) > slowEMA.GetValue(offset) && fastEMA.GetValue(offset1) <= slowEMA.GetValue(offset1);
+            bool shortSignal = fastEMA.GetValue(offset) < slowEMA.GetValue(offset) && fastEMA.GetValue(offset1) >= slowEMA.GetValue(offset1);
+
+            Position currentPosition = GetCurrentPosition();
+
+            if (currentPosition == null)
+            {
+                if (longSignal)
+                {
+                    Log("LONG signal detected. Sending BUY market order.");
+                    PlaceMarketOrder(Side.Buy);
+                }
+                else if (shortSignal)
+                {
+                    Log("SHORT signal detected. Sending SELL market order.");
+                    PlaceMarketOrder(Side.Sell);
+                }
+            }
+        }
+
+        private Position GetCurrentPosition()
+        {
+            if (this.symbol == null || this.account == null)
+                return null;
+
+            foreach (var pos in Core.Instance.Positions)
+            {
+                if (pos.Account == this.account && pos.Symbol == this.symbol)
+                    return pos;
+            }
+
+            return null;
+        }
+
+        private void PlaceMarketOrder(Side side)
+        {
+            if (orderQuantity <= 0)
+            {
+                Log("OrderQuantity must be > 0", StrategyLoggingLevel.Error);
+                return;
+            }
+
+            var request = new PlaceOrderRequestParameters()
+            {
+                Account = this.account,
+                Symbol = this.symbol,
+                Side = side,
+                Quantity = orderQuantity,
+                OrderTypeId = OrderType.Market,
+                StopLoss = SlTpHolder.CreateSL(stopLossTicks, PriceMeasurement.Offset),
+                TakeProfit = SlTpHolder.CreateTP(profitTargetTicks, PriceMeasurement.Offset),
+            };
+
+            var result = Core.Instance.PlaceOrder(request);
+
+            if (result.Status == TradingOperationResultStatus.Failure)
+            {
+                Log($"PlaceOrder failed: {result.Message}", StrategyLoggingLevel.Error);
+            }
+
         }
 
         /// <summary>
@@ -186,8 +274,6 @@ namespace TestStrategy
             {
                 if (!isRunning)
                 {
-                    
-
                     if (botData is not null)
                         botData.NewHistoryItem -= OnNewHistoryItem;
                 }
@@ -218,5 +304,9 @@ namespace TestStrategy
         {
             // Add your code here
         }
+
+
+
+
     }
 }
