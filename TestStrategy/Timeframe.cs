@@ -20,8 +20,6 @@ namespace TestStrategy
 
                         SessionsContainer = _symbol.FindSessionsContainer(),
                         ExcludeOutOfSession = false,
-
-
                     });
                 }
 
